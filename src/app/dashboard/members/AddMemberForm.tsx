@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaChevronDown, FaImage, FaCalendarAlt, FaUsers, FaBriefcase, FaUpload, FaTimes, FaCheckCircle, FaExclamationTriangle, FaUserPlus } from 'react-icons/fa';
-import { FormInput } from '../auth/FormInput';
+import { FormInput } from '../../../components/auth/FormInput';
 import Image from 'next/image';
 
 interface AddMemberFormProps {

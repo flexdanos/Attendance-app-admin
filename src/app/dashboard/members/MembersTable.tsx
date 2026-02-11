@@ -3,138 +3,23 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { FaSearch, FaFilter, FaEye, FaEdit, FaTrash, FaUsers, FaCalendar, FaEnvelope, FaPhone, FaMapMarkerAlt, FaChevronLeft, FaChevronRight, FaEllipsisV, FaUserTimes, FaUserCheck, FaDownload } from 'react-icons/fa';
-import { Member } from '@/redux/features/api/membersApi';
+import { Member } from '@/redux/features/api/userApi';
+import { useGetUserQuery } from '@/redux/features/api/userApi';
 import Image from 'next/image';
 import { MemberDetailsModal } from './MemberDetailsModal';
 import { EditMemberModal } from './EditMemberModal';
 
 interface MembersTableProps {
   members: Member[];
-  isLoading: boolean;
+  isLoading?: boolean;
   onEdit?: (member: Member) => void;
   onDelete?: (memberId: string) => void;
   onView?: (member: Member) => void;
 }
 
-// Dummy data for demonstration
-const dummyMembers: Member[] = [
-  {
-    _id: '1',
-    full_name: 'John Smith',
-    email: 'john.smith@example.com',
-    phone_number: '+1 (555) 123-4567',
-    address: '123 Church Street, New York, NY 10001',
-    membership_status: 'member',
-    group_affiliation: 'Choir',
-    roles: 'Deacon, Sunday School Teacher',
-    date_of_birth: '1985-06-15',
-    profile_picture: '',
-    createdAt: '2024-01-15T10:30:00Z',
-    updatedAt: '2024-01-15T10:30:00Z',
-  },
-  {
-    _id: '2',
-    full_name: 'Sarah Johnson',
-    email: 'sarah.johnson@example.com',
-    phone_number: '+1 (555) 234-5678',
-    address: '456 Faith Avenue, Brooklyn, NY 11201',
-    membership_status: 'church worker',
-    group_affiliation: 'Ushering Team',
-    roles: 'Head Usher, Youth Leader',
-    date_of_birth: '1990-03-22',
-    profile_picture: '',
-    createdAt: '2024-01-10T14:20:00Z',
-    updatedAt: '2024-01-10T14:20:00Z',
-  },
-  {
-    _id: '3',
-    full_name: 'Michael Brown',
-    email: 'michael.brown@example.com',
-    phone_number: '+1 (555) 345-6789',
-    address: '789 Grace Road, Queens, NY 11101',
-    membership_status: 'visitor',
-    group_affiliation: '',
-    roles: '',
-    date_of_birth: '1988-11-08',
-    profile_picture: '',
-    createdAt: '2024-01-20T09:15:00Z',
-    updatedAt: '2024-01-20T09:15:00Z',
-  },
-  {
-    _id: '4',
-    full_name: 'Emily Davis',
-    email: 'emily.davis@example.com',
-    phone_number: '+1 (555) 456-7890',
-    address: '321 Hope Street, Bronx, NY 10451',
-    membership_status: 'member',
-    group_affiliation: 'Worship Team',
-    roles: 'Lead Singer, Pianist',
-    date_of_birth: '1992-07-30',
-    profile_picture: '',
-    createdAt: '2024-01-05T16:45:00Z',
-    updatedAt: '2024-01-05T16:45:00Z',
-  },
-  {
-    _id: '5',
-    full_name: 'Robert Wilson',
-    email: 'robert.wilson@example.com',
-    phone_number: '+1 (555) 567-8901',
-    address: '654 Trinity Lane, Manhattan, NY 10002',
-    membership_status: 'member',
-    group_affiliation: 'Men\'s Fellowship',
-    roles: 'Treasurer, Bible Study Leader',
-    date_of_birth: '1980-09-12',
-    profile_picture: '',
-    createdAt: '2023-12-28T11:30:00Z',
-    updatedAt: '2023-12-28T11:30:00Z',
-  },
-  {
-    _id: '6',
-    full_name: 'Maria Garcia',
-    email: 'maria.garcia@example.com',
-    phone_number: '+1 (555) 678-9012',
-    address: '987 Peace Boulevard, Staten Island, NY 10301',
-    membership_status: 'church worker',
-    group_affiliation: 'Children\'s Ministry',
-    roles: 'Sunday School Coordinator',
-    date_of_birth: '1987-04-18',
-    profile_picture: '',
-    createdAt: '2023-12-15T13:20:00Z',
-    updatedAt: '2023-12-15T13:20:00Z',
-  },
-  {
-    _id: '7',
-    full_name: 'David Martinez',
-    email: 'david.martinez@example.com',
-    phone_number: '+1 (555) 789-0123',
-    address: '147 Redemption Way, New York, NY 10003',
-    membership_status: 'visitor',
-    group_affiliation: '',
-    roles: '',
-    date_of_birth: '1995-01-25',
-    profile_picture: '',
-    createdAt: '2024-01-22T10:00:00Z',
-    updatedAt: '2024-01-22T10:00:00Z',
-  },
-  {
-    _id: '8',
-    full_name: 'Lisa Anderson',
-    email: 'lisa.anderson@example.com',
-    phone_number: '+1 (555) 890-1234',
-    address: '258 Blessing Court, Brooklyn, NY 11202',
-    membership_status: 'member',
-    group_affiliation: 'Prayer Team',
-    roles: 'Prayer Warrior, Counselor',
-    date_of_birth: '1983-12-05',
-    profile_picture: '',
-    createdAt: '2023-11-30T15:10:00Z',
-    updatedAt: '2023-11-30T15:10:00Z',
-  },
-];
-
 export const MembersTable = ({ 
-  members, 
-  isLoading, 
+  members,
+  isLoading = false,
   onEdit, 
   onDelete, 
   onView 
@@ -148,6 +33,12 @@ export const MembersTable = ({
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Get current user data
+  const { data: userData, isLoading: isUserLoading, error: userError } = useGetUserQuery();
+
+  // Check if user has admin privileges
+  const isAdmin = userData?.user?.role === 'admin' || userData?.user?.role === 'superadmin';
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -166,11 +57,11 @@ export const MembersTable = ({
     setCurrentPage(1);
   }, [searchTerm, filterStatus, itemsPerPage]);
 
-  // Use dummy data if no real members are provided
-  const displayMembers = members && members.length > 0 ? members : dummyMembers;
+  // Use members data from props
+  const displayMembers = members || [];
 
   // Filter members based on search and status
-  const filteredMembers = displayMembers.filter(member => {
+  const filteredMembers = displayMembers.filter((member: Member) => {
     const matchesSearch = member.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          member.phone_number.includes(searchTerm);
@@ -182,6 +73,36 @@ export const MembersTable = ({
   const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedMembers = filteredMembers.slice(startIndex, startIndex + itemsPerPage);
+
+  // Handle user data loading and error states
+  if (isUserLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-2 text-gray-600">Loading user data...</span>
+      </div>
+    );
+  }
+
+  if (userError) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-md p-4">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <span className="text-red-400 text-xl">⚠️</span>
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-red-800">Error loading user data</h3>
+            <div className="mt-2 text-sm text-red-700">
+              {typeof userError === 'object' && 'data' in userError 
+                ? userError.data as string 
+                : 'Failed to load user information. Please try again.'}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -258,16 +179,98 @@ export const MembersTable = ({
     }
   };
 
-  if (isLoading) {
+  // Handle loading states
+  if (isUserLoading || isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-burgundy-600"></div>
+        <span className="ml-2 text-gray-600">Loading data...</span>
       </div>
     );
   }
 
+  // Handle error states
+  if (userError) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-md p-4">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <span className="text-red-400 text-xl">⚠️</span>
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-red-800">Error loading data</h3>
+            <div className="mt-2 text-sm text-red-700">
+              Failed to load user information. Please try again.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle empty state when no members are loaded
+  if (!isLoading && displayMembers.length === 0) {
+    return (
+      <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 overflow-hidden p-12">
+        <div className="text-center">
+          <FaUsers className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Members Found</h3>
+          <p className="text-gray-500">
+            No members exist in the system yet.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // User info section
+  const UserInfoSection = () => {
+    if (!userData?.user) return null;
+    
+    return (
+      <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              {userData.user.profile_picture ? (
+                <Image
+                  src={userData.user.profile_picture}
+                  alt={userData.user.full_name || userData.user.username}
+                  width={48}
+                  height={48}
+                  className="rounded-full object-cover border-2 border-white shadow-sm"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                  {(userData.user.full_name || userData.user.username).charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">
+                {userData.user.full_name || userData.user.username}
+              </h3>
+              <p className="text-sm text-gray-600">{userData.user.email}</p>
+              {userData.user.role && (
+                <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full mt-1">
+                  {userData.user.role}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="text-sm text-gray-500">
+            Logged in as: {userData.user.username}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 overflow-hidden">
+      {/* User Info Section */}
+      <UserInfoSection />
+      
       {/* Header */}
       <div className="p-6 border-b border-gray-100">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -349,7 +352,7 @@ export const MembersTable = ({
                 </td>
               </tr>
             ) : (
-              paginatedMembers.map((member, index) => (
+              paginatedMembers.map((member: Member, index: number) => (
                 <motion.tr
                   key={member._id}
                   initial={{ opacity: 0, y: 10 }}
@@ -370,7 +373,7 @@ export const MembersTable = ({
                           />
                         ) : (
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-burgundy-500 to-burgundy-700 flex items-center justify-center text-white font-semibold text-sm">
-                            {member.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            {member.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                           </div>
                         )}
                       </div>
@@ -422,13 +425,15 @@ export const MembersTable = ({
                       >
                         <FaEye className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() => handleAction('edit', member)}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Edit member"
-                      >
-                        <FaEdit className="w-4 h-4" />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleAction('edit', member)}
+                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Edit member"
+                        >
+                          <FaEdit className="w-4 h-4" />
+                        </button>
+                      )}
                       
                       {/* More Actions Dropdown */}
                       <div className="relative">
@@ -447,6 +452,7 @@ export const MembersTable = ({
                             exit={{ opacity: 0, scale: 0.95, y: -10 }}
                             className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
                           >
+                            {/* Export - available to all authenticated users */}
                             <button
                               onClick={() => handleAction('export', member)}
                               className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
@@ -454,14 +460,35 @@ export const MembersTable = ({
                               <FaDownload className="w-4 h-4 text-blue-500" />
                               Export Data
                             </button>
-                            <div className="border-t border-gray-100 my-1"></div>
-                            <button
-                              onClick={() => handleAction('delete', member)}
-                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
-                            >
-                              <FaTrash className="w-4 h-4" />
-                              Delete Member
-                            </button>
+                            
+                            {/* Admin-only actions */}
+                            {isAdmin && (
+                              <>
+                                <div className="border-t border-gray-100 my-1"></div>
+                                <button
+                                  onClick={() => handleAction('suspend', member)}
+                                  className="w-full px-4 py-2 text-left text-sm text-yellow-600 hover:bg-yellow-50 flex items-center gap-2 transition-colors"
+                                >
+                                  <FaUserTimes className="w-4 h-4" />
+                                  Suspend Member
+                                </button>
+                                <button
+                                  onClick={() => handleAction('activate', member)}
+                                  className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center gap-2 transition-colors"
+                                >
+                                  <FaUserCheck className="w-4 h-4" />
+                                  Activate Member
+                                </button>
+                                <div className="border-t border-gray-100 my-1"></div>
+                                <button
+                                  onClick={() => handleAction('delete', member)}
+                                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                                >
+                                  <FaTrash className="w-4 h-4" />
+                                  Delete Member
+                                </button>
+                              </>
+                            )}
                           </motion.div>
                         )}
                       </div>
