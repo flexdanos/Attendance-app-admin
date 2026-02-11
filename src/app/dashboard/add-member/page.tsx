@@ -6,15 +6,17 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { FaArrowLeft, FaUserPlus, FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCalendarAlt, FaUsers, FaBriefcase, FaImage, FaCheckCircle, FaExclamationTriangle } from "react-icons/fa";
 import Link from "next/link";
-import { AddMemberForm } from "@/components/members/AddMemberForm";
-import { MembersTable } from "@/components/members/MembersTable";
+import { AddMemberForm } from "@/app/dashboard/members/AddMemberForm";
+import { MembersTable } from "@/app/dashboard/members/MembersTable";
 import { useAddMemberMutation, useGetMembersQuery } from "@/redux/features/api/membersApi";
 import { Member } from "@/redux/features/api/membersApi";
+import { useGetUserQuery } from "@/redux/features/api/userApi";
 
 const AddMemberPage = () => {
   const router = useRouter();
   const [addMember, { isLoading }] = useAddMemberMutation();
   const { data: membersData, isLoading: membersLoading, refetch } = useGetMembersQuery();
+  const { data: userData, isLoading: userLoading } = useGetUserQuery();
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
@@ -38,6 +40,8 @@ const AddMemberPage = () => {
       base64?: string;
     } | null,
   });
+
+  console.log(membersData, "zzzzzzzzzzzzz")
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -189,9 +193,9 @@ const AddMemberPage = () => {
                   >
                     <FaUsers className="inline mr-2 w-4 h-4" />
                     All Members
-                    {membersData?.members && (
+                    {userData  && (
                       <span className="ml-2 px-2 py-0.5 bg-burgundy-100 text-burgundy-700 rounded-full text-xs">
-                        {membersData.members.length}
+                        {userData.user.full_name || userData.user.username}
                       </span>
                     )}
                   </button>
