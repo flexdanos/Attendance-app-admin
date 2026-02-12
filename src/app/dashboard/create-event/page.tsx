@@ -4,21 +4,22 @@ import { motion } from "framer-motion";
 import { FaCalendarPlus, FaArrowLeft, FaClock, FaMapMarkerAlt, FaUsers, FaTag } from "react-icons/fa";
 import Link from "next/link";
 import { useState } from "react";
+import { useAddEventMutation } from "@/redux/features/api/eventsApi";
+import { useRouter } from "next/navigation";
 
 const CreateEventPage = () => {
+  const router = useRouter();
+  const [addEvent, { isLoading, error }] = useAddEventMutation();
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     date: "",
     time: "",
     location: "",
-    maxAttendees: "",
     category: "",
-    isRecurring: false,
-    recurringPattern: "weekly"
+    max_attendees: "",
+    is_recurring: false
   });
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -30,26 +31,39 @@ const CreateEventPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    console.log("Event created:", formData);
-    setIsSubmitting(false);
-    
-    // Reset form
-    setFormData({
-      title: "",
-      description: "",
-      date: "",
-      time: "",
-      location: "",
-      maxAttendees: "",
-      category: "",
-      isRecurring: false,
-      recurringPattern: "weekly"
-    });
+    try {
+      // Combine date and time into ISO string for start_time
+      const startDateTime = new Date(`${formData.date}T${formData.time}`);
+      const eventData = {
+        title: formData.title,
+        description: formData.description,
+        start_time: startDateTime.toISOString(),
+        location: formData.location,
+        category: formData.category || "service",
+        max_attendees: formData.max_attendees ? parseInt(formData.max_attendees) : undefined,
+        is_recurring: formData.is_recurring
+      };
+      
+      await addEvent(eventData).unwrap();
+      
+      // Reset form
+      setFormData({
+        title: "",
+        description: "",
+        date: "",
+        time: "",
+        location: "",
+        category: "",
+        max_attendees: "",
+        is_recurring: false
+      });
+      
+      // Redirect to events page
+      router.push("/dashboard/events");
+    } catch (err) {
+      console.error("Failed to create event:", err);
+    }
   };
 
   return (
@@ -60,11 +74,11 @@ const CreateEventPage = () => {
         transition={{ duration: 0.5 }}
       >
         <Link
-          href="/dashboard"
+          href="/dashboard/events"
           className="inline-flex items-center gap-2 text-burgundy-600 hover:text-burgundy-700 font-medium mb-6 transition-colors"
         >
           <FaArrowLeft className="text-sm" />
-          Back to Dashboard
+          Back to Events
         </Link>
 
         <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
@@ -83,10 +97,17 @@ const CreateEventPage = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {'data' in error ? (error as any).data : "Failed to create event. Please try again."}
+              </div>
+            )}
+
             {/* Event Title */}
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                Event Title *
+                Title *
               </label>
               <input
                 type="text"
@@ -172,13 +193,14 @@ const CreateEventPage = () => {
               <div>
                 <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
                   <FaTag className="inline mr-2" />
-                  Category
+                  Category *
                 </label>
                 <select
                   id="category"
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
+                  required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-burgundy-500 focus:border-burgundy-500 transition-colors"
                 >
                   <option value="">Select category</option>
@@ -191,15 +213,15 @@ const CreateEventPage = () => {
                 </select>
               </div>
               <div>
-                <label htmlFor="maxAttendees" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="max_attendees" className="block text-sm font-medium text-gray-700 mb-2">
                   <FaUsers className="inline mr-2" />
                   Max Attendees
                 </label>
                 <input
                   type="number"
-                  id="maxAttendees"
-                  name="maxAttendees"
-                  value={formData.maxAttendees}
+                  id="max_attendees"
+                  name="max_attendees"
+                  value={formData.max_attendees}
                   onChange={handleInputChange}
                   min="1"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-burgundy-500 focus:border-burgundy-500 transition-colors"
@@ -213,46 +235,57 @@ const CreateEventPage = () => {
               <div className="flex items-center mb-4">
                 <input
                   type="checkbox"
-                  id="isRecurring"
-                  name="isRecurring"
-                  checked={formData.isRecurring}
+                  id="is_recurring"
+                  name="is_recurring"
+                  checked={formData.is_recurring}
                   onChange={handleInputChange}
                   className="h-4 w-4 text-burgundy-600 focus:ring-burgundy-500 border-gray-300 rounded"
                 />
-                <label htmlFor="isRecurring" className="ml-2 block text-sm text-gray-700">
-                  This is a recurring event
+                <label htmlFor="is_recurring" className="ml-2 block text-sm text-gray-700">
+                  Is Recurring
                 </label>
               </div>
-
-              {formData.isRecurring && (
-                <div>
-                  <label htmlFor="recurringPattern" className="block text-sm font-medium text-gray-700 mb-2">
-                    Recurring Pattern
-                  </label>
-                  <select
-                    id="recurringPattern"
-                    name="recurringPattern"
-                    value={formData.recurringPattern}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-burgundy-500 focus:border-burgundy-500 transition-colors"
-                  >
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="biweekly">Bi-weekly</option>
-                    <option value="monthly">Monthly</option>
-                  </select>
-                </div>
-              )}
             </div>
+
+            {/* QR Code */}
+            {/* <div>
+              <label htmlFor="qr_code_base64" className="block text-sm font-medium text-gray-700 mb-2">
+                QR Code (Auto-generated)
+              </label>
+              <div className="space-y-3">
+                {formData.qr_code_base64 && (
+                  <div className="flex justify-center p-4 bg-gray-50 rounded-lg">
+                    <img 
+                      src={`data:image/png;base64,${formData.qr_code_base64}`}
+                      alt="Event QR Code"
+                      className="w-32 h-32 object-contain"
+                    />
+                  </div>
+                )}
+                <textarea
+                  id="qr_code_base64"
+                  name="qr_code_base64"
+                  value={formData.qr_code_base64}
+                  onChange={handleInputChange}
+                  rows={3}
+                  readOnly
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-burgundy-500 focus:border-burgundy-500 transition-colors resize-none bg-gray-50"
+                  placeholder="QR code will be automatically generated when you fill in event details"
+                />
+                <p className="text-sm text-gray-500">
+                  QR code is automatically generated with event details (title, date, time, location)
+                </p>
+              </div>
+            </div> */}
 
             {/* Submit Buttons */}
             <div className="flex gap-4 pt-6">
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isLoading}
                 className="flex-1 bg-burgundy-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-burgundy-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Creating Event..." : "Create Event"}
+                {isLoading ? "Creating Event..." : "Create Event"}
               </button>
               <Link
                 href="/dashboard"
