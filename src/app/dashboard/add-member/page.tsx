@@ -193,9 +193,11 @@ const AddMemberPage = () => {
                   >
                     <FaUsers className="inline mr-2 w-4 h-4" />
                     All Members
-                    {userData  && (
+                    {membersData?.members && (
+
                       <span className="ml-2 px-2 py-0.5 bg-burgundy-100 text-burgundy-700 rounded-full text-xs">
-                        {userData.user.full_name || userData.user.username}
+                        {membersData.members.length}
+
                       </span>
                     )}
                   </button>
